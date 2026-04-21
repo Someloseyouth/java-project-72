@@ -1,0 +1,21 @@
+# Gradle cache
+.gradle
+
+# Gradle build output directories
+build
+**/build
+
+# Compiled classes
+*.class
+jte-classes
+
+# Eclipse / other IDE
+*.settings
+.factorypath
+bin
+.classpath
+
+# IntelliJ IDEA
+.idea/
+*.iml
+out/
