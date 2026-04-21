@@ -22,3 +22,7 @@ jobs:
         working-directory: app
       - run: ./gradlew test
         working-directory: app
+      - run: ./gradlew sonar
+        working-directory: app
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

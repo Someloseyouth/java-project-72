@@ -1,6 +1,7 @@
 plugins {
     checkstyle
     id("java")
+    id("org.sonarqube") version "7.2.3.7755"
 }
 
 group = "hexlet.code"
@@ -17,6 +18,13 @@ dependencies {
 
 checkstyle {
     configDirectory.set(layout.projectDirectory.dir("../config/checkstyle"))
+}
+
+sonar {
+    properties {
+        property("sonar.projectKey", "Someloseyouth_java-project-72")
+        property("sonar.organization", "someloseyouth")
+    }
 }
 
 tasks.test {
