@@ -2,6 +2,8 @@ package hexlet.code;
 
 import hexlet.code.repository.BaseRepository;
 
+import org.postgresql.Driver;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -35,9 +37,18 @@ public class App {
     }
 
     public static Javalin getApp() throws IOException, SQLException {
+        try {
+            Class.forName("org.postgresql.Driver");
+            log.info("PostgreSQL driver loaded: {}", Driver.class.getName());
+        } catch (ClassNotFoundException e) {
+            log.error("PostgreSQL driver not found in classpath", e);
+        }
+
         var hikariConfig = new HikariConfig();
         var jdbcUrl = getJdbcUrl();
         hikariConfig.setJdbcUrl(jdbcUrl);
+        hikariConfig.setDriverClassName("org.postgresql.Driver");
+
         log.info("Using JDBC URL: {}", jdbcUrl);
 
         var dataSource = new HikariDataSource(hikariConfig);
