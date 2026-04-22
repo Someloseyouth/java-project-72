@@ -23,7 +23,7 @@ dependencies {
     implementation("com.zaxxer:HikariCP:7.0.2")
     implementation("io.javalin:javalin:7.2.0")
     implementation("org.slf4j:slf4j-simple:2.0.17")
-
+    implementation("org.postgresql:postgresql:42.7.10")
 
 
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
