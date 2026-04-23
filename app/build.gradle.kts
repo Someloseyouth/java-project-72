@@ -22,9 +22,10 @@ dependencies {
     implementation("com.h2database:h2:2.3.232")
     implementation("com.zaxxer:HikariCP:7.0.2")
     implementation("io.javalin:javalin:7.2.0")
+    implementation("io.javalin:javalin-rendering-jte:7.2.0")
+    implementation("gg.jte:jte:3.2.1")
     implementation("org.slf4j:slf4j-simple:2.0.17")
     implementation("org.postgresql:postgresql:42.7.10")
-
 
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")

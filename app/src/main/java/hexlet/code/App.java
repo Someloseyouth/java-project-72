@@ -1,8 +1,11 @@
 package hexlet.code;
 
+import gg.jte.ContentType;
+import gg.jte.TemplateEngine;
+import gg.jte.resolve.ResourceCodeResolver;
 import hexlet.code.repository.BaseRepository;
 
-import org.postgresql.Driver;
+import io.javalin.Javalin;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -11,8 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.stream.Collectors;
 import java.sql.SQLException;
 
-
-import io.javalin.Javalin;
+import io.javalin.rendering.template.JavalinJte;
 import lombok.extern.slf4j.Slf4j;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -36,18 +38,17 @@ public class App {
         }
     }
 
-    public static Javalin getApp() throws IOException, SQLException {
-        try {
-            Class.forName("org.postgresql.Driver");
-            log.info("PostgreSQL driver loaded: {}", Driver.class.getName());
-        } catch (ClassNotFoundException e) {
-            log.error("PostgreSQL driver not found in classpath", e);
-        }
+    private static TemplateEngine createTemplateEngine() {
+        ClassLoader classLoader = App.class.getClassLoader();
+        ResourceCodeResolver codeResolver = new ResourceCodeResolver("templates", classLoader);
+        TemplateEngine templateEngine = TemplateEngine.create(codeResolver, ContentType.Html);
+        return templateEngine;
+    }
 
+    public static Javalin getApp() throws IOException, SQLException {
         var hikariConfig = new HikariConfig();
         var jdbcUrl = getJdbcUrl();
         hikariConfig.setJdbcUrl(jdbcUrl);
-        hikariConfig.setDriverClassName("org.postgresql.Driver");
 
         log.info("Using JDBC URL: {}", jdbcUrl);
 
@@ -68,7 +69,8 @@ public class App {
         var app = Javalin.create(config -> {
             config.bundledPlugins.enableDevLogging();
             config.jetty.port = port;
-            config.routes.get("/", ctx -> ctx.result("Hello World"));
+            config.fileRenderer(new JavalinJte(createTemplateEngine()));
+            config.routes.get("/", ctx -> ctx.render("index.jte"));
         });
 
         log.info("Javalin application configured");
