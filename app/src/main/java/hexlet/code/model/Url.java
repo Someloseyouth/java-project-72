@@ -1,13 +1,18 @@
 package hexlet.code.model;
 
 import java.time.LocalDateTime;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
 
-@AllArgsConstructor
+import lombok.Getter;
+import lombok.Setter;
+
 @Getter
-public class Url {
+@Setter
+public final class Url {
     private Long id;
     private String name;
     private LocalDateTime createdAt;
+
+    public Url(String name) {
+        this.name = name;
+    }
 }

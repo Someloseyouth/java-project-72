@@ -3,13 +3,18 @@ package hexlet.code;
 import gg.jte.ContentType;
 import gg.jte.TemplateEngine;
 import gg.jte.resolve.ResourceCodeResolver;
+import hexlet.code.controller.UrlsController;
+import hexlet.code.dto.IndexPage;
 import hexlet.code.repository.BaseRepository;
 
+import hexlet.code.util.NamedRoutes;
+import hexlet.code.util.View;
 import io.javalin.Javalin;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+
 import java.nio.charset.StandardCharsets;
 import java.util.stream.Collectors;
 import java.sql.SQLException;
@@ -23,7 +28,7 @@ import com.zaxxer.hikari.HikariDataSource;
 public class App {
     private static int getPort() {
         var port = Integer.parseInt(System.getenv().getOrDefault("PORT", "8080"));
-        return Integer.valueOf(port);
+        return port;
     }
 
     private static String getJdbcUrl() {
@@ -43,6 +48,13 @@ public class App {
         ResourceCodeResolver codeResolver = new ResourceCodeResolver("templates", classLoader);
         TemplateEngine templateEngine = TemplateEngine.create(codeResolver, ContentType.Html);
         return templateEngine;
+    }
+
+    public static void main(String[] args) throws IOException, SQLException {
+        log.info("Starting application...");
+        var app = getApp();
+        app.start();
+        log.info("Application started");
     }
 
     public static Javalin getApp() throws IOException, SQLException {
@@ -74,17 +86,18 @@ public class App {
             config.bundledPlugins.enableDevLogging();
             config.jetty.port = port;
             config.fileRenderer(new JavalinJte(createTemplateEngine()));
-            config.routes.get("/", ctx -> ctx.render("index.jte"));
+
+            config.routes.get(NamedRoutes.indexPath(), ctx -> {
+                var page = new IndexPage();
+                ctx.render("index.jte", View.model("page", page));
+            });
+
+            config.routes.get(NamedRoutes.urlsPath(), UrlsController::index);
+            config.routes.get(NamedRoutes.urlPath("{id}"), UrlsController::show);
+            config.routes.post(NamedRoutes.urlsPath(), UrlsController::create);
         });
 
         log.info("Javalin application configured");
         return app;
-    }
-
-    public static void main(String[] args) throws IOException, SQLException {
-        log.info("Starting application...");
-        var app = getApp();
-        app.start();
-        log.info("Application started");
     }
 }
