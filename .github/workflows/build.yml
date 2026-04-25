@@ -22,6 +22,23 @@ jobs:
         working-directory: app
       - run: ./gradlew test
         working-directory: app
+      - run: ./gradlew jacocoTestReport
+        working-directory: app
+
+      - name: Generate JaCoCo Badge
+        uses: cicirello/jacoco-badge-generator@v2
+        with:
+          jacoco-csv-file: app/build/reports/jacoco/test/jacocoTestReport.csv
+          badges-directory: .github/badges
+
+      - name: Commit and push badge
+        if: ${{ github.ref == 'refs/heads/main' }}
+        uses: EndBug/add-and-commit@v9
+        with:
+          default_author: github_actions
+          message: 'Update coverage badge'
+          add: '.github/badges/*.svg'
+
       - run: ./gradlew sonar
         working-directory: app
         env:
