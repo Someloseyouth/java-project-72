@@ -11,6 +11,8 @@ public final class Url {
     private Long id;
     private String name;
     private LocalDateTime createdAt;
+    private Integer lastStatusCode;
+    private LocalDateTime lastCheckAt;
 
     public Url(String name) {
         this.name = name;

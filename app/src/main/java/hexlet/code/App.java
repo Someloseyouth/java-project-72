@@ -95,10 +95,7 @@ public class App {
             config.routes.get(NamedRoutes.urlsPath(), UrlsController::index);
             config.routes.get(NamedRoutes.urlPath("{id}"), UrlsController::show);
             config.routes.post(NamedRoutes.urlsPath(), UrlsController::create);
-            config.routes.post("/urls/{id}/checks", ctx -> {
-                var id = ctx.pathParamAsClass("id", Long.class).get();
-                ctx.redirect(NamedRoutes.urlPath(id));
-            });
+            config.routes.post(NamedRoutes.urlCheckPath("{id}"), UrlsController::check);
         });
 
         log.info("Javalin application configured");

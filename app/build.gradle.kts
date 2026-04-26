@@ -28,8 +28,11 @@ dependencies {
     implementation("gg.jte:jte:3.2.1")
     implementation("org.slf4j:slf4j-simple:2.0.17")
     implementation("org.postgresql:postgresql:42.7.10")
+    implementation("com.konghq:unirest-java-core:4.5.1")
+    implementation("org.jsoup:jsoup:1.17.2")
 
     testImplementation("io.javalin:javalin-testtools:7.2.0")
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.9.0")
     testImplementation("org.assertj:assertj-core:3.27.3")
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")

@@ -4,10 +4,15 @@ package hexlet.code;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import hexlet.code.model.Url;
+import hexlet.code.repository.UrlCheckRepository;
 import hexlet.code.repository.UrlRepository;
 import hexlet.code.util.NamedRoutes;
 import io.javalin.Javalin;
 import io.javalin.testtools.JavalinTest;
+import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.MockWebServer;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -17,6 +22,18 @@ import java.sql.SQLException;
 
 public class AppTest {
     private Javalin app;
+    private static MockWebServer mockServer;
+
+    @BeforeAll
+    static void startServer() throws IOException {
+        mockServer = new MockWebServer();
+        mockServer.start();
+    }
+
+    @AfterAll
+    static void stopServer() throws IOException {
+        mockServer.shutdown();
+    }
 
     @BeforeEach
     public final void setUp() throws IOException, SQLException {
@@ -108,4 +125,60 @@ public class AppTest {
         });
     }
 
+    @Test
+    public void testUrlCheck() throws SQLException {
+        var html = """
+                <html>
+                  <head>
+                    <title>Example Title</title>
+                    <meta name="description" content="Example description">
+                  </head>
+                  <body>
+                    <h1>Example H1</h1>
+                  </body>
+                </html>
+                """;
+        mockServer.enqueue(new MockResponse().setResponseCode(200).setBody(html));
+
+        String urlToCheck = mockServer.url("/").toString();
+        var url = new Url(urlToCheck);
+        UrlRepository.save(url);
+
+        JavalinTest.test(app, (server, client) -> {
+            var response = client.post(NamedRoutes.urlCheckPath(url.getId()));
+            assertThat(response.code()).isBetween(300, 399);
+
+            var showResponse = client.get(NamedRoutes.urlPath(url.getId()));
+            var body = showResponse.body().string();
+            assertThat(body).contains("data-test=\"checks\"");
+            assertThat(body).contains("Example Title");
+            assertThat(body).contains("Example H1");
+            assertThat(body).contains("Example description");
+        });
+        var checks = UrlCheckRepository.findByUrlId(url.getId());
+        assertThat(checks).hasSize(1);
+        var check = checks.getFirst();
+        assertThat(check.getStatusCode()).isEqualTo(200);
+    }
+
+    @Test
+    public void testFailedUrlCheck() throws SQLException {
+        mockServer.enqueue(new MockResponse().setResponseCode(500).setBody("Server error"));
+
+        String urlToCheck = mockServer.url("/").toString();
+        var url = new Url(urlToCheck);
+        UrlRepository.save(url);
+
+        JavalinTest.test(app, (server, client) -> {
+            var response = client.post(NamedRoutes.urlCheckPath(url.getId()));
+            assertThat(response.code()).isBetween(300, 399);
+
+            var showResponse = client.get(NamedRoutes.urlPath(url.getId()));
+            var body = showResponse.body().string();
+            assertThat(body).contains("Произошла ошибка при проверке");
+        });
+
+        var checks = UrlCheckRepository.findByUrlId(url.getId());
+        assertThat(checks).isEmpty();
+    }
 }
