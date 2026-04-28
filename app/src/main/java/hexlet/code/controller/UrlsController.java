@@ -124,14 +124,15 @@ public class UrlsController {
 
         if (url != null) {
             ctx.sessionAttribute("flash", "Страница уже существует");
-            ctx.sessionAttribute("flash-type", "info");
+            ctx.sessionAttribute("flashType", "info");
+            ctx.redirect(NamedRoutes.urlPath(url.getId()));
         } else {
             Url newUrl = new Url(normalizedUrl);
             UrlRepository.save(newUrl);
             ctx.sessionAttribute("flash", "Страница успешно добавлена");
-            ctx.sessionAttribute("flash-type", "success");
+            ctx.sessionAttribute("flashType", "success");
+            ctx.redirect(NamedRoutes.urlPath(newUrl.getId()));
         }
-        ctx.redirect(NamedRoutes.urlsPath());
     }
 
     private static void renderInvalidUrl(Context ctx) {
