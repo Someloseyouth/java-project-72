@@ -167,7 +167,8 @@ public class AppTest {
 
     @Test
     public void testFailedUrlCheck() throws SQLException {
-        mockServer.enqueue(new MockResponse().setResponseCode(HttpStatus.INTERNAL_SERVER_ERROR.getCode()).setBody("Server error"));
+        mockServer.enqueue(new MockResponse()
+                .setResponseCode(HttpStatus.INTERNAL_SERVER_ERROR.getCode()).setBody("Server error"));
 
         String urlToCheck = mockServer.url("/").toString();
         var url = new Url(urlToCheck);
