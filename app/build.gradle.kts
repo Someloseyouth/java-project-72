@@ -1,7 +1,6 @@
 plugins {
     application
     checkstyle
-    id("java")
     id("jacoco")
     id("org.sonarqube") version "7.2.3.7755"
     id("io.freefair.lombok") version "8.13.1"

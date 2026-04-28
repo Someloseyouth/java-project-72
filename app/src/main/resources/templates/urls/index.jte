@@ -24,8 +24,8 @@
                             <a href="${NamedRoutes.urlPath(url.getId())}">${url.getName()}</a>
                         </td>
                         <td>
-                            @if (url.getLastCheckAt() != null)
-                                ${url.getLastCheckAt().toLocalDate().toString()}
+                            @if (url.getLastCheckAtFormatted() != null)
+                                ${url.getLastCheckAtFormatted()}
                             @endif
                         </td>
                         <td>

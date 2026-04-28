@@ -20,15 +20,19 @@ import org.jsoup.Jsoup;
 import java.net.URI;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 public class UrlsController {
     public static void index(Context ctx) throws SQLException {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         var urls = UrlRepository.getEntities();
+        var checks = UrlCheckRepository.findLastChecks();
         for (var url : urls) {
-            var lastCheckOptional = UrlCheckRepository.findLastByUrlId(url.getId());
-            if (lastCheckOptional.isPresent()) {
-                var lastCheck = lastCheckOptional.get();
+            var lastCheck = checks.get(url.getId());
+            if (lastCheck != null) {
                 url.setLastStatusCode(lastCheck.getStatusCode());
+                var formatted = lastCheck.getCreatedAt().format(formatter);
+                url.setLastCheckAtFormatted(formatted);
                 url.setLastCheckAt(lastCheck.getCreatedAt());
             }
         }
@@ -38,12 +42,8 @@ public class UrlsController {
 
     public static void show(Context ctx) throws SQLException {
         var id = ctx.pathParamAsClass("id", Long.class).get();
-        var urlOptional = UrlRepository.find(id);
-        if (urlOptional.isEmpty()) {
-            throw new NotFoundResponse("Url not found");
-        }
-
-        var url = urlOptional.get();
+        var url = UrlRepository.find(id)
+                .orElseThrow(() -> new NotFoundResponse("Url not found"));
         var checks = UrlCheckRepository.findByUrlId(id);
         var page = new UrlPage(url, checks);
         page.setFlash(ctx.consumeSessionAttribute("flash"));
@@ -53,11 +53,8 @@ public class UrlsController {
 
     public static void check(Context ctx) throws SQLException {
         var id = ctx.pathParamAsClass("id", Long.class).get();
-        var urlOptional = UrlRepository.find(id);
-        if (urlOptional.isEmpty()) {
-            throw new NotFoundResponse("Url not found");
-        }
-        var url = urlOptional.get();
+        var url = UrlRepository.find(id)
+                .orElseThrow(() -> new NotFoundResponse("Url not found"));
         try {
             var response = Unirest.get(url.getName()).asString();
             var statusCode = response.getStatus();
@@ -95,50 +92,53 @@ public class UrlsController {
     }
 
     public static void create(Context ctx) throws SQLException {
-        var urlName = ctx.formParamAsClass("url", String.class).get();
-        var normalized = urlName.strip().trim();
-        String dbUrl;
-        if (normalized.isEmpty()) {
-            ctx.status(422);
-            var page = new IndexPage();
-            page.setUrl(normalized);
-            page.setFlash("Некорректный URL");
-            page.setFlashType("danger");
-            ctx.render("index.jte", View.model("page", page));
+        var inputUrl = ctx.formParam("url");
+        if (inputUrl == null || inputUrl.isBlank()) {
+            renderInvalidUrl(ctx);
             return;
         }
-
+        URI parsedUrl;
         try {
-            var uri = new URI(normalized);
-            var url = uri.toURL();
-            var urlProtocol = url.getProtocol();
-            var urlHost = url.getHost();
-            var urlPort = url.getPort();
-            if (urlPort == -1) {
-                dbUrl = urlProtocol + "://" + urlHost;
-            } else {
-                dbUrl = urlProtocol + "://" + urlHost + ":" + urlPort;
-            }
-            var urlOptional = UrlRepository.findByName(dbUrl);
-            if (urlOptional.isEmpty()) {
-                var urlEntity = new Url(dbUrl);
-                UrlRepository.save(urlEntity);
-                ctx.sessionAttribute("flash", "Страница успешно добавлена");
-                ctx.sessionAttribute("flashType", "success");
-                ctx.redirect(NamedRoutes.urlPath(urlEntity.getId()));
-            } else {
-                Url existing = urlOptional.get();
-                ctx.sessionAttribute("flash", "Страница уже существует");
-                ctx.sessionAttribute("flashType", "warning");
-                ctx.redirect(NamedRoutes.urlPath(existing.getId()));
-            }
+            parsedUrl = new URI(inputUrl);
         } catch (Exception e) {
-            ctx.status(422);
-            var page = new IndexPage();
-            page.setUrl(normalized);
-            page.setFlash("Некорректный URL");
-            page.setFlashType("danger");
-            ctx.render("index.jte", View.model("page", page));
+            renderInvalidUrl(ctx);
+            return;
         }
+        var scheme = parsedUrl.getScheme();
+        var host = parsedUrl.getHost();
+        if (scheme == null
+                || (!scheme.equals("http") && !scheme.equals("https"))
+                || host == null) {
+            renderInvalidUrl(ctx);
+            return;
+        }
+        String normalizedUrl = String
+                .format(
+                        "%s://%s%s",
+                        parsedUrl.getScheme(),
+                        parsedUrl.getHost(),
+                        parsedUrl.getPort() == -1 ? "" : ":" + parsedUrl.getPort()
+                )
+                .toLowerCase();
+        Url url = UrlRepository.findByName(normalizedUrl).orElse(null);
+
+        if (url != null) {
+            ctx.sessionAttribute("flash", "Страница уже существует");
+            ctx.sessionAttribute("flash-type", "info");
+        } else {
+            Url newUrl = new Url(normalizedUrl);
+            UrlRepository.save(newUrl);
+            ctx.sessionAttribute("flash", "Страница успешно добавлена");
+            ctx.sessionAttribute("flash-type", "success");
+        }
+        ctx.redirect(NamedRoutes.urlsPath());
+    }
+
+    private static void renderInvalidUrl(Context ctx) {
+        ctx.status(422);
+        var page = new IndexPage();
+        page.setFlash("Некорректный URL");
+        page.setFlashType("danger");
+        ctx.render("index.jte", View.model("page", page));
     }
 }

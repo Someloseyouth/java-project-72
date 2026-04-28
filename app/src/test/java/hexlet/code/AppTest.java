@@ -8,6 +8,7 @@ import hexlet.code.repository.UrlCheckRepository;
 import hexlet.code.repository.UrlRepository;
 import hexlet.code.util.NamedRoutes;
 import io.javalin.Javalin;
+import io.javalin.http.HttpStatus;
 import io.javalin.testtools.JavalinTest;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
@@ -44,7 +45,7 @@ public class AppTest {
     public void testMainPage() {
         JavalinTest.test(app, (server, client) -> {
             var response = client.get(NamedRoutes.indexPath());
-            assertThat(response.code()).isEqualTo(200);
+            assertThat(response.code()).isEqualTo(HttpStatus.OK.getCode());
             assertThat(response.body().string()).contains("name=\"url\"");
         });
     }
@@ -54,7 +55,7 @@ public class AppTest {
         JavalinTest.test(app, (server, client) -> {
             var requestBody = "url=https://ru.hexlet.io/blog/posts/operativnaya-pamyat-kesh";
             var response = client.post(NamedRoutes.urlsPath(), requestBody);
-            assertThat(response.code()).isBetween(300, 399);
+            assertThat(response.code()).isEqualTo(HttpStatus.FOUND.getCode());
             var urls = UrlRepository.getEntities();
             assertThat(urls).hasSize(1);
             assertThat(urls.getFirst().getName()).isEqualTo("https://ru.hexlet.io");
@@ -67,8 +68,8 @@ public class AppTest {
             var requestBody = "url=https://ru.hexlet.io/blog/posts/operativnaya-pamyat-kesh";
             var response1 = client.post(NamedRoutes.urlsPath(), requestBody);
             var response2 = client.post(NamedRoutes.urlsPath(), requestBody);
-            assertThat(response1.code()).isBetween(300, 399);
-            assertThat(response2.code()).isBetween(300, 399);
+            assertThat(response1.code()).isEqualTo(HttpStatus.FOUND.getCode());
+            assertThat(response2.code()).isEqualTo(HttpStatus.FOUND.getCode());
             var urls = UrlRepository.getEntities();
             assertThat(urls).hasSize(1);
             assertThat(urls.getFirst().getName()).isEqualTo("https://ru.hexlet.io");
@@ -80,7 +81,7 @@ public class AppTest {
         JavalinTest.test(app, (server, client) -> {
             var requestBody = "url=not-a-url";
             var response = client.post(NamedRoutes.urlsPath(), requestBody);
-            assertThat(response.code()).isEqualTo(422);
+            assertThat(response.code()).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT.getCode());
             var urls = UrlRepository.getEntities();
             assertThat(urls).hasSize(0);
             assertThat(response.body().string()).contains("Некорректный URL");
@@ -95,7 +96,7 @@ public class AppTest {
         UrlRepository.save(url2);
         JavalinTest.test(app, (server, client) -> {
             var response = client.get(NamedRoutes.urlsPath());
-            assertThat(response.code()).isEqualTo(200);
+            assertThat(response.code()).isEqualTo(HttpStatus.OK.getCode());
             var body = response.body().string();
             assertThat(body).contains("data-test=\"urls\"");
             assertThat(body).contains("ru.hexlet.io");
@@ -109,7 +110,7 @@ public class AppTest {
         UrlRepository.save(url);
         JavalinTest.test(app, (server, client) -> {
             var response = client.get(NamedRoutes.urlPath(url.getId()));
-            assertThat(response.code()).isEqualTo(200);
+            assertThat(response.code()).isEqualTo(HttpStatus.OK.getCode());
             var body = response.body().string();
             assertThat(body).contains("ru.hexlet.io");
             assertThat(body).contains("data-test=\"url\"");
@@ -121,7 +122,7 @@ public class AppTest {
     public void testUrlPageNotFound() {
         JavalinTest.test(app, (server, client) -> {
             var response = client.get(NamedRoutes.urlPath("99999999999"));
-            assertThat(response.code()).isEqualTo(404);
+            assertThat(response.code()).isEqualTo(HttpStatus.NOT_FOUND.getCode());
         });
     }
 
@@ -138,7 +139,7 @@ public class AppTest {
                   </body>
                 </html>
                 """;
-        mockServer.enqueue(new MockResponse().setResponseCode(200).setBody(html));
+        mockServer.enqueue(new MockResponse().setResponseCode(HttpStatus.OK.getCode()).setBody(html));
 
         String urlToCheck = mockServer.url("/").toString();
         var url = new Url(urlToCheck);
@@ -146,7 +147,7 @@ public class AppTest {
 
         JavalinTest.test(app, (server, client) -> {
             var response = client.post(NamedRoutes.urlCheckPath(url.getId()));
-            assertThat(response.code()).isBetween(300, 399);
+            assertThat(response.code()).isEqualTo(HttpStatus.FOUND.getCode());
 
             var showResponse = client.get(NamedRoutes.urlPath(url.getId()));
             var body = showResponse.body().string();
@@ -158,12 +159,15 @@ public class AppTest {
         var checks = UrlCheckRepository.findByUrlId(url.getId());
         assertThat(checks).hasSize(1);
         var check = checks.getFirst();
-        assertThat(check.getStatusCode()).isEqualTo(200);
+        assertThat(check.getStatusCode()).isEqualTo(HttpStatus.OK.getCode());
+        assertThat(check.getTitle()).isEqualTo("Example Title");
+        assertThat(check.getH1()).isEqualTo("Example H1");
+        assertThat(check.getDescription()).isEqualTo("Example description");
     }
 
     @Test
     public void testFailedUrlCheck() throws SQLException {
-        mockServer.enqueue(new MockResponse().setResponseCode(500).setBody("Server error"));
+        mockServer.enqueue(new MockResponse().setResponseCode(HttpStatus.INTERNAL_SERVER_ERROR.getCode()).setBody("Server error"));
 
         String urlToCheck = mockServer.url("/").toString();
         var url = new Url(urlToCheck);
@@ -171,7 +175,7 @@ public class AppTest {
 
         JavalinTest.test(app, (server, client) -> {
             var response = client.post(NamedRoutes.urlCheckPath(url.getId()));
-            assertThat(response.code()).isBetween(300, 399);
+            assertThat(response.code()).isEqualTo(HttpStatus.FOUND.getCode());
 
             var showResponse = client.get(NamedRoutes.urlPath(url.getId()));
             var body = showResponse.body().string();

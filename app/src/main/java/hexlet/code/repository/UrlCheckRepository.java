@@ -8,7 +8,9 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public class UrlCheckRepository extends BaseRepository {
@@ -66,16 +68,28 @@ public class UrlCheckRepository extends BaseRepository {
         }
     }
 
-    public static Optional<UrlCheck> findLastByUrlId(Long urlId) throws SQLException {
-        var sql = "SELECT * FROM url_checks WHERE url_id = ? ORDER BY created_at DESC LIMIT 1";
+    public static Map<Long, UrlCheck> findLastChecks() throws SQLException {
+        Map<Long, UrlCheck> checks = new HashMap<>();
+        var sql = """
+                SELECT uc.*
+                FROM url_checks uc
+                JOIN (
+                    SELECT url_id, MAX(created_at) AS last_created_at
+                    FROM url_checks
+                    GROUP BY url_id
+                ) t ON uc.url_id = t.url_id
+                   AND uc.created_at = t.last_created_at
+                """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
-            stmt.setLong(1, urlId);
+
             var resultSet = stmt.executeQuery();
-            if (!resultSet.next()) {
-                return Optional.empty();
+            while (resultSet.next()) {
+                UrlCheck check = mapRow(resultSet);
+                var urlId = check.getUrlId();
+                checks.put(urlId, check);
             }
-            return Optional.of(mapRow(resultSet));
         }
+        return checks;
     }
 }
